@@ -3,12 +3,10 @@ package ru.job4j.cars.repository;
 import lombok.AllArgsConstructor;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
-import org.hibernate.mapping.Collection;
 import ru.job4j.cars.model.User;
 import javax.persistence.*;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -29,6 +27,8 @@ public class UserRepository {
             session.getTransaction().commit();
         } catch (Exception e) {
             session.getTransaction().rollback();
+        } finally {
+            session.close();
         }
         return user;
     }
@@ -42,14 +42,16 @@ public class UserRepository {
         try {
             session.beginTransaction();
             session.createQuery(
-                            "UPDATE auto_user SET name = :fName and password = :fPassword WHERE id = :fId")
-                    .setParameter("fName", "new name")
-                    .setParameter("fPassword", "new password")
+                            "UPDATE auto_user SET login = :fLogin and password = :fPassword WHERE id = :fId")
+                    .setParameter("fName", user.getLogin())
+                    .setParameter("fPassword", user.getPassword())
                     .setParameter("fId", user.getId())
                     .executeUpdate();
             session.getTransaction().commit();
         } catch (Exception e) {
             session.getTransaction().rollback();
+        } finally {
+            session.close();
         }
     }
 
@@ -68,8 +70,9 @@ public class UserRepository {
             session.getTransaction().commit();
         } catch (Exception e) {
             session.getTransaction().rollback();
+        } finally {
+            session.close();
         }
-
     }
 
     /**
@@ -77,11 +80,20 @@ public class UserRepository {
      * @return список пользователей.
      */
     public List<User> findAllOrderById() {
-        List<User> list = new ArrayList<>();
+        List list = new ArrayList<>();
         Session session = sf.openSession();
-        Query query = session.createQuery("from User");
-        for (Object st : query.getResultList()) {
-            list.add((User) st);
+        try {
+            Query query = session.createQuery("from User", User.class);
+            /*
+            for (Object st : query.getResultList()) {
+                list.add((User) st);
+            }
+             */
+            list = query.getResultList();
+        } catch (Exception e) {
+            session.getTransaction().rollback();
+        } finally {
+            session.close();
         }
         return list;
     }
@@ -92,10 +104,17 @@ public class UserRepository {
      */
     public Optional<User> findById(int userId) {
         Session session = sf.openSession();
-        session.beginTransaction();
         User result = session.get(User.class, userId);
-        session.getTransaction().commit();
-        session.close();
+        try {
+            session.beginTransaction();
+            session.getTransaction().commit();
+            session.close();
+        } catch (Exception e) {
+            session.getTransaction().rollback();
+        } finally {
+            session.close();
+        }
+
         return Optional.ofNullable(result);
     }
 
@@ -105,27 +124,46 @@ public class UserRepository {
      * @return список пользователей.
      */
     public List<User> findByLikeLogin(String key) {
-        List<User> list = new ArrayList<>();
+        List list = new ArrayList<>();
         Session session = sf.openSession();
-        Query query = session.createQuery(
-                "from User as u where u.login like :fKey", User.class);
-        query.setParameter("fKey", "%" + key + "%");
-        for (Object st : query.getResultList()) {
-            list.add((User) st);
+        try {
+            Query query = session.createQuery(
+                    "from User as u where u.login like :fKey", User.class);
+            query.setParameter("fKey", "%" + key + "%");
+            /*
+            for (Object st : query.getResultList()) {
+                list.add((User) st);
+            }
+             */
+            list = query.getResultList();
+        } catch (Exception e) {
+            session.getTransaction().rollback();
+        } finally {
+            session.close();
         }
         return list;
     }
 
     /**
      * Найти пользователя по login.
+     *
      * @param login login.
      * @return Optional or user.
      */
     public Optional<User> findByLogin(String login) {
+        Optional<User> optionalUser = Optional.empty();
         Session session = sf.openSession();
-        org.hibernate.query.Query<?> query = session.createQuery(
-                "from User as u where u.login = :fLogin", User.class);
-        query.setParameter("fLogin", login);
-        return (Optional<User>) query.uniqueResult();
+        try {
+            session.beginTransaction();
+            Query query = session.createQuery("FROM User WHERE login = :fLogin", User.class);
+            query.setParameter("fLogin", login);
+            optionalUser = (Optional<User>) ((org.hibernate.query.Query<?>) query).uniqueResultOptional();
+            session.getTransaction().commit();
+        } catch (Exception e) {
+            session.getTransaction().rollback();
+        } finally {
+            session.close();
+        }
+        return optionalUser;
     }
 }
