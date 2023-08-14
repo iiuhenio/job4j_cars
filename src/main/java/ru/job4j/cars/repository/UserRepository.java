@@ -9,6 +9,7 @@ import javax.persistence.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.hibernate.query.Query;
 
 @AllArgsConstructor
 public class UserRepository {
@@ -153,10 +154,10 @@ public class UserRepository {
         Session session = sf.openSession();
         try {
             session.beginTransaction();
-            Query query = session.createQuery("FROM User WHERE login = :fLogin", User.class);
+            Query<User> query = session.createQuery("FROM User WHERE login = :fLogin", User.class);
             query.setParameter("fLogin", login);
 
-            optionalUser = (Optional<User>) ((org.hibernate.query.Query<?>) query).uniqueResultOptional();
+            optionalUser = query.uniqueResultOptional();
             session.getTransaction().commit();
         } catch (Exception e) {
             session.getTransaction().rollback();
