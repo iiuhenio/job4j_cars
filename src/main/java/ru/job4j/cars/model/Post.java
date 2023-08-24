@@ -5,13 +5,15 @@ import lombok.*;
 import lombok.EqualsAndHashCode.Include;
 
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
-@Table(name = "post")
+@Table(name = "auto_post")
 public class Post {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -19,5 +21,9 @@ public class Post {
     private int id;
     private String description;
     private Timestamp created;
-    private int userId;
+
+    @OneToMany(cascade = CascadeType.ALL)
+    @JoinColumn(name = "auto_post_id")
+    private List<Post> autoPosts = new ArrayList<>();
+
 }
